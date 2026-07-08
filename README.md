@@ -5,7 +5,7 @@
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![MIT](https://img.shields.io/badge/license-MIT-green)
 
-A [MyThingsLab](../mythings-core) `My[X]` tool: given a document-drafting
+A [MyThingsLab](../my-things-core) `My[X]` tool: given a document-drafting
 issue (label `my-typster`, a `kind` of report/note/letter/resume/...), drafts
 Typst source against a style anchor, compiles it with the real `typst` CLI,
 and opens a PR carrying both the `.typ` source and the compiled PDF.
@@ -66,7 +66,7 @@ code level. Pass `--json` to get a machine-readable result on stdout.
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
-pip install -e ../mythings-core -e ../my-guard -e ".[dev]"
+pip install -e ../my-things-core -e ../my-guard -e ".[dev]"
 pytest
 ```
 
