@@ -29,10 +29,10 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      # mythings-core and my-guard are sibling repos, not on PyPI — pull from the same owner.
+      # my-things-core and my-guard are sibling repos, not on PyPI — pull from the same owner.
       - name: Install siblings
         run: |
-          pip install "mythings-core @ git+https://github.com/${{ github.repository_owner }}/mythings-core@main"
+          pip install "my-things-core @ git+https://github.com/${{ github.repository_owner }}/my-things-core@main"
           pip install "my-guard @ git+https://github.com/${{ github.repository_owner }}/my-guard@main"
       # First tool needing a compiler-toolchain binary, not just a Python package —
       # pinned direct download, same version this repo was developed against.
