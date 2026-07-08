@@ -1,0 +1,2 @@
+{"data":{"session":"2026-07-08"},"detail":"copied my-template, renamed to my-typster","kind":"scaffold","outcome":"success","tool":"claude-code","ts":"2026-07-07T23:38:22Z"}
+{"data":{"session":"2026-07-08"},"detail":"Typster: issue-driven Typst drafting, compile gate, personal-kind fence, presentation hand-off","kind":"build","outcome":"success","tool":"claude-code","ts":"2026-07-07T23:38:23Z"}
