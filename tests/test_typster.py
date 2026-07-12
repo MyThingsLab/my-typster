@@ -6,11 +6,10 @@ from pathlib import Path
 from mythings.ledger import Ledger
 
 from conftest import (
-    FakeRunner,
     FakeTypst,
     ScriptedEngine,
-    SpyEngine,
     branch_file,
+    fake_gh,
     make_target_repo,
     make_templates_repo,
 )
@@ -27,7 +26,7 @@ _FENCED_REPLY = json.dumps(
 
 
 def _keeper(
-    repo: Path, templates: Path, tmp_path: Path, fake: FakeRunner, **kw
+    repo: Path, templates: Path, tmp_path: Path, fake: fake_gh, **kw
 ) -> tuple[Typster, Ledger]:
     ledger = Ledger(tmp_path / "ledger.jsonl")
     k = Typster(
@@ -45,7 +44,7 @@ def _keeper(
 def test_draft_happy_path_opens_pr_and_records_ledger(tmp_path: Path) -> None:
     repo = make_target_repo(tmp_path)
     templates = make_templates_repo(tmp_path)
-    fake = FakeRunner()
+    fake = fake_gh()
     k, ledger = _keeper(repo, templates, tmp_path, fake, engine=ScriptedEngine(_DRAFT_REPLY))
 
     result = k.draft(issue=5)
@@ -69,7 +68,7 @@ def test_draft_happy_path_opens_pr_and_records_ledger(tmp_path: Path) -> None:
 def test_draft_compile_failure_posts_comment_no_pr(tmp_path: Path) -> None:
     repo = make_target_repo(tmp_path)
     templates = make_templates_repo(tmp_path)
-    fake = FakeRunner()
+    fake = fake_gh()
     k, ledger = _keeper(
         repo,
         templates,
@@ -92,7 +91,7 @@ def test_draft_compile_failure_posts_comment_no_pr(tmp_path: Path) -> None:
 def test_draft_rejects_over_scoped_import_and_degrades_to_stub(tmp_path: Path) -> None:
     repo = make_target_repo(tmp_path)
     templates = make_templates_repo(tmp_path)
-    fake = FakeRunner()
+    fake = fake_gh()
     k, ledger = _keeper(repo, templates, tmp_path, fake, engine=ScriptedEngine(_FENCED_REPLY))
 
     result = k.draft(issue=5)
@@ -107,8 +106,8 @@ def test_draft_rejects_over_scoped_import_and_degrades_to_stub(tmp_path: Path) -
 def test_draft_personal_kind_refused_outside_private_repo(tmp_path: Path) -> None:
     repo = make_target_repo(tmp_path)
     templates = make_templates_repo(tmp_path)
-    fake = FakeRunner(title="Draft my resume", body="years of experience...", labels=["resume"])
-    spy = SpyEngine()
+    fake = fake_gh(title="Draft my resume", body="years of experience...", labels=["resume"])
+    spy = ScriptedEngine()
     k, ledger = _keeper(repo, templates, tmp_path, fake, engine=spy)
 
     result = k.draft(issue=5, kind="resume")
@@ -123,7 +122,7 @@ def test_draft_personal_kind_refused_outside_private_repo(tmp_path: Path) -> Non
 def test_draft_personal_kind_allowed_in_private_repo(tmp_path: Path) -> None:
     repo = make_target_repo(tmp_path)
     templates = make_templates_repo(tmp_path)
-    fake = FakeRunner(title="Draft my resume", body="years of experience...", labels=["resume"])
+    fake = fake_gh(title="Draft my resume", body="years of experience...", labels=["resume"])
     ledger = Ledger(tmp_path / "ledger.jsonl")
     k = Typster(
         repo_root=repo,
@@ -145,7 +144,7 @@ def test_draft_personal_kind_allowed_in_private_repo(tmp_path: Path) -> None:
 def test_draft_no_pr_skips_pr_creation(tmp_path: Path) -> None:
     repo = make_target_repo(tmp_path)
     templates = make_templates_repo(tmp_path)
-    fake = FakeRunner()
+    fake = fake_gh()
     k, _ = _keeper(repo, templates, tmp_path, fake, engine=ScriptedEngine(_DRAFT_REPLY))
 
     result = k.draft(issue=5, no_pr=True)
@@ -158,7 +157,7 @@ def test_draft_no_pr_skips_pr_creation(tmp_path: Path) -> None:
 def test_draft_against_noop_engine_degrades_to_header_body_stub(tmp_path: Path) -> None:
     repo = make_target_repo(tmp_path)
     templates = make_templates_repo(tmp_path)
-    fake = FakeRunner(title="Draft a note on RayTracer", body="A ray tracing engine.")
+    fake = fake_gh(title="Draft a note on RayTracer", body="A ray tracing engine.")
     k, ledger = _keeper(repo, templates, tmp_path, fake)  # default NoopEngine
 
     result = k.draft(issue=5)
@@ -174,8 +173,8 @@ def test_draft_against_noop_engine_degrades_to_header_body_stub(tmp_path: Path) 
 def test_draft_from_json_renders_presentation_without_engine_call(tmp_path: Path) -> None:
     repo = make_target_repo(tmp_path)
     templates = make_templates_repo(tmp_path)
-    fake = FakeRunner(title="Deck about kernels", body="")
-    spy = SpyEngine()
+    fake = fake_gh(title="Deck about kernels", body="")
+    spy = ScriptedEngine()
     k, ledger = _keeper(repo, templates, tmp_path, fake, engine=spy)
 
     slides = {"slides": [{"title": "Intro", "bullets": ["what is a kernel"]}]}
