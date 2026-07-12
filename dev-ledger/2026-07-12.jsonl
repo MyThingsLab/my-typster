@@ -1,0 +1,1 @@
+{"data":{"files":"tests/","session":"2026-07-12"},"detail":"Mechanical migration to mythings.testing: shared FakeGh/ScriptedEngine/make_git_repo/GitRepo replace local copies; FakeTypst (typst CLI boundary) and template payloads stay local.","kind":"build","outcome":"success","tool":"claude-code","ts":"2026-07-12T10:06:24Z"}
