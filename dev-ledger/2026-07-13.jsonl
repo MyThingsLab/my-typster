@@ -1,0 +1,1 @@
+{"data":{"commit":"611e212","files":"src/mytypster/typster.py,tests/test_typster.py","pr":"6","session":"2026-07-13"},"detail":"Escape MyPresentation slide content into valid Typst markup; unescaped bullets crashed/corrupted decks on real physics content","kind":"fix","outcome":"success","tool":"claude-code","ts":"2026-07-13T16:24:08Z"}
