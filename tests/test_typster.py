@@ -186,3 +186,50 @@ def test_draft_from_json_renders_presentation_without_engine_call(tmp_path: Path
     assert 'slide("Intro")' in committed
     assert "what is a kernel" in committed
     assert list(ledger)[0].outcome == "success"
+
+
+def test_render_presentation_escapes_typst_markup_in_bullets(tmp_path: Path) -> None:
+    repo = make_target_repo(tmp_path)
+    templates = make_templates_repo(tmp_path)
+    fake = fake_gh(title="Deck about physics", body="")
+    k, ledger = _keeper(repo, templates, tmp_path, fake, engine=ScriptedEngine())
+
+    slides = {
+        "slides": [
+            {
+                "title": 'Field h with "quotes" \\ backslash',
+                "bullets": [r"H = J \sum_{<i,j>} sigma_i^z, h ~ 1 [see #ref] $x$"],
+            }
+        ]
+    }
+    result = k.draft(issue=5, kind="presentation", from_slides=slides)
+
+    assert result.outcome == "success"
+    committed = branch_file(repo, "my-typster/5", result.typ_path)
+    # bullet markup metacharacters must all be neutralized, not raw source
+    # (braces/caret are plain text outside math mode, so they pass through)
+    assert r"- H = J \\sum\_{\<i,j\>} sigma\_i^z, h \~ 1 \[see \#ref\] \$x\$" in committed
+    # title lands inside a valid, escaped string literal
+    assert '"Field h with \\"quotes\\" \\\\ backslash"' in committed
+    assert list(ledger)[0].outcome == "success"
+
+
+def test_render_presentation_threads_speaker_notes(tmp_path: Path) -> None:
+    repo = make_target_repo(tmp_path)
+    templates = make_templates_repo(tmp_path)
+    fake = fake_gh(title="Deck about kernels", body="")
+    k, ledger = _keeper(repo, templates, tmp_path, fake, engine=ScriptedEngine())
+
+    slides = {
+        "slides": [
+            {"title": "Intro", "bullets": ["hi"], "speaker_notes": "mention the audience"},
+            {"title": "No notes", "bullets": ["hi"]},
+        ]
+    }
+    result = k.draft(issue=5, kind="presentation", from_slides=slides)
+
+    assert result.outcome == "success"
+    committed = branch_file(repo, "my-typster/5", result.typ_path)
+    assert 'notes: "mention the audience"' in committed
+    assert 'slide("No notes")[' in committed  # no notes -> no notes: kwarg emitted
+    assert list(ledger)[0].outcome == "success"

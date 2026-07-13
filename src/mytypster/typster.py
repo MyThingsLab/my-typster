@@ -383,13 +383,43 @@ def _render_presentation(anchor_text: str, slides_payload: dict[str, object]) ->
     for slide in slides:
         title = str(slide.get("title", ""))
         bullets = slide.get("bullets") or []
-        body_lines = "\n".join(f"- {b}" for b in bullets) or "_(no content)_"
-        blocks.append(f'#slide("{_escape(title)}")[\n{body_lines}\n]')
+        notes = str(slide.get("speaker_notes", "") or "")
+        body_lines = "\n".join(f"- {_escape_markup(str(b))}" for b in bullets) or "_(no content)_"
+        notes_arg = f', notes: "{_escape_string(notes)}"' if notes else ""
+        blocks.append(f'#slide("{_escape_string(title)}"{notes_arg})[\n{body_lines}\n]')
     return header + "\n\n".join(blocks) + "\n"
 
 
-def _escape(text: str) -> str:
-    return text.replace('"', '\\"')
+# Title/notes are interpolated as Typst *string* values (`#title`), which Typst
+# inserts as literal text without re-parsing — so only the string-literal syntax
+# itself (backslash, quote) needs escaping.
+_STRING_ESCAPE = {"\\": "\\\\", '"': '\\"'}
+
+# Bullets are written directly as markup *source* (`- <bullet>`), which Typst
+# does parse — so every markup metacharacter must be neutralized, or content
+# like `sigma_i^z`, `h < 1`, or `[cite]` corrupts or breaks the compile.
+_MARKUP_ESCAPE = {
+    "\\": "\\\\",
+    "*": "\\*",
+    "_": "\\_",
+    "`": "\\`",
+    "#": "\\#",
+    "$": "\\$",
+    "<": "\\<",
+    ">": "\\>",
+    "[": "\\[",
+    "]": "\\]",
+    "~": "\\~",
+    "@": "\\@",
+}
+
+
+def _escape_string(text: str) -> str:
+    return "".join(_STRING_ESCAPE.get(ch, ch) for ch in text)
+
+
+def _escape_markup(text: str) -> str:
+    return "".join(_MARKUP_ESCAPE.get(ch, ch) for ch in text)
 
 
 def _default_typst_runner(argv: list[str]) -> str:
