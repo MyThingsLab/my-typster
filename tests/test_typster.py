@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from mythings.ledger import Ledger
+from mythings.testing import make_git_repo
 
 from conftest import (
     FakeTypst,
@@ -233,3 +234,43 @@ def test_render_presentation_threads_speaker_notes(tmp_path: Path) -> None:
     assert 'notes: "mention the audience"' in committed
     assert 'slide("No notes")[' in committed  # no notes -> no notes: kwarg emitted
     assert list(ledger)[0].outcome == "success"
+
+
+def test_render_presentation_embeds_and_stages_images(tmp_path: Path) -> None:
+    repo = make_git_repo(
+        tmp_path, files={"README.md": "# target\n", "plots/order_parameter.png": "PNGDATA"}
+    ).path
+    templates = make_templates_repo(tmp_path)
+    fake = fake_gh(title="Deck about TFIM", body="")
+    k, ledger = _keeper(repo, templates, tmp_path, fake, engine=ScriptedEngine())
+
+    slides = {
+        "slides": [
+            {
+                "title": "Results",
+                "bullets": ["see the plot"],
+                "images": ["plots/order_parameter.png"],
+            }
+        ]
+    }
+    result = k.draft(issue=5, kind="presentation", from_slides=slides)
+
+    assert result.outcome == "success"
+    committed = branch_file(repo, "my-typster/5", result.typ_path)
+    assert '#image("plots/order_parameter.png", width: 80%)' in committed
+    # the referenced image file itself must be committed onto the PR branch too
+    assert branch_file(repo, "my-typster/5", "plots/order_parameter.png") == "PNGDATA"
+    assert list(ledger)[0].outcome == "success"
+
+
+def test_render_presentation_escapes_image_paths() -> None:
+    from mytypster.typster import _render_presentation
+
+    anchor = "#set text(size: 20pt)\n\n// === body ===\n"
+    payload = {
+        "slides": [
+            {"title": "t", "bullets": [], "images": ['plots/a "weird" (path).png']},
+        ]
+    }
+    src = _render_presentation(anchor, payload)
+    assert '#image("plots/a \\"weird\\" (path).png", width: 80%)' in src

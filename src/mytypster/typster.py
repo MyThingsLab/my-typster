@@ -211,7 +211,10 @@ class Typster:
             pr = None
             if not no_pr:
                 try:
-                    pr = self._open_pr(tree, topic, slug, resolved_kind, typ_path, pdf_path)
+                    image_paths = _image_paths(typ_source)
+                    pr = self._open_pr(
+                        tree, topic, slug, resolved_kind, typ_path, pdf_path, image_paths
+                    )
                 except PolicyDenied as denied:
                     return self._fail(resolved_kind, str(denied))
 
@@ -294,6 +297,7 @@ class Typster:
         kind: str,
         typ_path: str,
         pdf_path: str | None,
+        image_paths: list[str] | None = None,
     ) -> PullRequest:
         branch = f"{LABEL}/{topic.number}"
         existing = self._existing_pr(branch)
@@ -301,6 +305,11 @@ class Typster:
         self._git(tree, ["add", typ_path])
         if pdf_path:
             self._git(tree, ["add", pdf_path])
+        # Referenced images must already exist in the checkout (this tool never
+        # fabricates image bytes) -- a missing one is caught by the compile gate
+        # above, not silently skipped here.
+        for image_path in image_paths or []:
+            self._git(tree, ["add", image_path])
         self._git(tree, ["commit", "-m", f"typster: draft {slug} ({kind})"])
         self._git(tree, ["push", "-u" if existing is None else "", "origin", branch])
         if existing is not None:
@@ -384,10 +393,40 @@ def _render_presentation(anchor_text: str, slides_payload: dict[str, object]) ->
         title = str(slide.get("title", ""))
         bullets = slide.get("bullets") or []
         notes = str(slide.get("speaker_notes", "") or "")
+        images = slide.get("images") or []
         body_lines = "\n".join(f"- {_escape_markup(str(b))}" for b in bullets) or "_(no content)_"
+        # A path is a Typst *string* argument to #image(...), like title/notes --
+        # only the string-literal syntax needs escaping, not markup metacharacters.
+        image_lines = "\n".join(
+            f'#image("{_escape_string(str(img))}", width: 80%)' for img in images
+        )
+        if image_lines:
+            body_lines = f"{body_lines}\n{image_lines}"
         notes_arg = f', notes: "{_escape_string(notes)}"' if notes else ""
         blocks.append(f'#slide("{_escape_string(title)}"{notes_arg})[\n{body_lines}\n]')
     return header + "\n\n".join(blocks) + "\n"
+
+
+_IMAGE_RE = re.compile(r'#image\("([^"]*)"', re.MULTILINE)
+
+
+def _image_paths(typ_source: str) -> list[str]:
+    # Reverses the escaping #image("...") applied above, so the raw path can
+    # be looked up on disk / passed to `git add`.
+    return [_unescape_string(p) for p in _IMAGE_RE.findall(typ_source)]
+
+
+def _unescape_string(text: str) -> str:
+    out, i = [], 0
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\" and i + 1 < len(text):
+            out.append(text[i + 1])
+            i += 2
+        else:
+            out.append(ch)
+            i += 1
+    return "".join(out)
 
 
 # Title/notes are interpolated as Typst *string* values (`#title`), which Typst
