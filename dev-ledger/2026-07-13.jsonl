@@ -1,0 +1,1 @@
+{"data":{"commit":"81bfd06","files":"src/mytypster/typster.py,tests/test_typster.py","pr":"8","session":"2026-07-13"},"detail":"Embed images in presentation slides via #image(), staged into the PR alongside the .typ/pdf","kind":"feat","outcome":"success","tool":"claude-code","ts":"2026-07-13T16:52:33Z"}
